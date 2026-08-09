@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+
+# Temp & output files
+temp/
+test_temp/
+test_files/
+output/
+*.wav
+
+# Logs
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment secrets
+.env
+
+# Generated annotation files (these are output, not source)
+*.eaf
+*.pfsx
+
+# Model caches (Whisper, pyannote, etc.)
+~/.cache/
+*.pt
+*.bin
