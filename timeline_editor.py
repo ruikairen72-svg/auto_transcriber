@@ -288,8 +288,9 @@ button{{cursor:pointer;}}
             <label>文本内容
                 <textarea id="editText" rows="2" placeholder="标注文本..."></textarea>
             </label>
-            <div class="btn-row">
+            <div class="btn-row" style="flex-wrap:wrap;">
                 <button class="btn-primary" id="btnApplyEdit">✓ 应用</button>
+                <button class="btn-primary" id="btnTokenize" style="background:#6a1b6a;">🔤 分词</button>
                 <button class="btn-danger" id="btnDeleteSeg">🗑 删除</button>
             </div>
         </div>
@@ -427,6 +428,64 @@ function updateUndoButtons() {{
     var ub = $('btnUndo'), rb = $('btnRedo');
     if (ub) {{ ub.disabled = undoStack.length === 0; ub.textContent = '↩ 撤销' + (undoStack.length ? ' ('+undoStack.length+')' : ''); }}
     if (rb) {{ rb.disabled = redoStack.length === 0; rb.textContent = '↪ 重做' + (redoStack.length ? ' ('+redoStack.length+')' : ''); }}
+}}
+
+// ============================================================
+// Frontend Chinese tokenization (Intl.Segmenter, instant)
+// ============================================================
+var _segZh = null;
+try {{
+    _segZh = new Intl.Segmenter('zh', {{ granularity: 'word' }});
+}} catch(e) {{
+    console.warn('[分词] Intl.Segmenter 不可用, 回退到简单正则分词:', e.message);
+}}
+
+var PUNCT_MAP_JS = {{
+    '。': '.', '，': ',', '？': '?', '！': '!',
+    '、': ',', '：': ':', '；': ';',
+    '\\u201c': '"', '\\u201d': '"',  // " "
+    '\\u2018': \"'\", '\\u2019': \"'\",  // ' '
+    '（': '(', '）': ')',
+    '《': '<', '》': '>',
+    '……': '...', '—': '-'
+}};
+
+function quickTokenize(text) {{
+    if (!text) return text;
+
+    try {{
+        // 1. Word segmentation via Intl.Segmenter (or regex fallback)
+        var tokens;
+        if (_segZh) {{
+            tokens = [];
+            // segment() returns an iterable Segments object — use Array.from()
+            var segs = _segZh.segment(text);
+            for (var _i = 0, _arr = Array.from(segs); _i < _arr.length; _i++) {{
+                tokens.push(_arr[_i].segment);
+            }}
+        }} else {{
+            // Fallback: split Chinese characters individually, keep Latin words
+            tokens = text.match(/[\\u4e00-\\u9fff]|[\\u3000-\\u303f\\uff00-\\uffef]|[a-zA-Z0-9]+|./g) || [text];
+        }}
+        var result = tokens.join(' ');
+
+        // 2. Replace Chinese punctuation → English
+        var keys = Object.keys(PUNCT_MAP_JS);
+        for (var i = 0; i < keys.length; i++) {{
+            result = result.split(keys[i]).join(PUNCT_MAP_JS[keys[i]]);
+        }}
+
+        // 3. Add spaces around English punctuation
+        result = result.replace(/([,.!?:;()<>\"'-])/g, ' $1 ');
+
+        // 4. Collapse spaces and trim
+        result = result.replace(/\\s+/g, ' ').trim();
+
+        return result;
+    }} catch (e) {{
+        console.error('[quickTokenize] 分词出错，返回原文本:', e);
+        return text;
+    }}
 }}
 
 // ============================================================
@@ -964,6 +1023,48 @@ function bindEvents() {{
     $('btnDeleteSeg').addEventListener('click', function() {{
         if (selectedId) {{ deleteSegment(selectedId); }}
     }});
+
+    // ---- Tokenize button (pure frontend, content-based detection) ----
+    $('btnTokenize').addEventListener('click', function() {{
+        console.log('[分词] 按钮被点击, selectedId=', selectedId);
+        if (!selectedId) {{
+            showErrorBar('请先在时间轴上单击选中一个标注，再点击分词');
+            return;
+        }}
+        var seg = segments.find(function(s) {{ return s.id === selectedId; }});
+        if (!seg) {{
+            showErrorBar('未找到选中的标注，请重新选择');
+            return;
+        }}
+        var currentText = seg.text || '';
+        console.log('[分词] 选中标注文本:', currentText.substring(0, 60));
+
+        // Compute tokenized version and compare — no flags needed
+        var tokenizedText;
+        try {{
+            tokenizedText = quickTokenize(currentText);
+        }} catch (err) {{
+            showErrorBar('分词失败: ' + (err.message || err));
+            console.error('[分词] 错误:', err);
+            return;
+        }}
+
+        // If tokenization produces identical text, it's already tokenized
+        if (tokenizedText === currentText) {{
+            showErrorBar('✅ 已分词，无需重复操作');
+            console.log('[分词] 跳过 — 文本未变化');
+            return;
+        }}
+
+        // Text changed — apply tokenization
+        saveUndoState();
+        seg.text = tokenizedText;
+        $('editText').value = seg.text;
+        renderSegment(seg.id);
+        syncToParent();
+        console.log('[分词] 完成, 结果:', seg.text.substring(0, 60));
+    }});
+
     $('btnAddTier').addEventListener('click', function() {{
         var name = $('newTierInput').value.trim();
         if (name && !tiers.includes(name)) {{

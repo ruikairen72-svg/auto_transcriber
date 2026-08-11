@@ -73,6 +73,17 @@ from processors.exporter import generate_eaf, generate_pfsx
 from timeline_editor import build_timeline_html
 
 
+def parse_time_to_seconds(time_str: str | None) -> float | None:
+    """Parse a time string (mm:ss or plain seconds) into seconds."""
+    if not time_str or time_str.strip() == "":
+        return None
+    time_str = time_str.strip()
+    if ":" in time_str:
+        parts = time_str.split(":")
+        return int(parts[0]) * 60 + float(parts[1])
+    return float(time_str)
+
+
 # ---------------------------------------------------------------------------
 # CSS — clean, professional look for linguistics annotation work
 # ---------------------------------------------------------------------------
@@ -124,6 +135,7 @@ def _log_error(exc: Exception) -> None:
 # ---------------------------------------------------------------------------
 
 def process_video(video_file, num_speakers, template_eaf_file, state, template_tiers,
+                  segment_enabled, segment_start, segment_end,
                   progress=gr.Progress()):
     """
     Generator that runs the full pipeline and yields incremental UI updates.
@@ -277,10 +289,20 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
         yield updates
 
         ns = int(num_speakers) if num_speakers and int(num_speakers) > 0 else None
+
+        # Parse segment times if enabled
+        start_sec = None
+        end_sec = None
+        if segment_enabled:
+            start_sec = parse_time_to_seconds(segment_start)
+            end_sec = parse_time_to_seconds(segment_end)
+
         pipeline_result = run_pipeline(
             filepath,
             TEMP_DIR,
             num_speakers=ns,
+            start_time=start_sec,
+            end_time=end_sec,
             progress_callback=lambda amount, desc: progress(amount, desc=desc),
         )
 
@@ -325,6 +347,9 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
             if i < n:
                 spk = speakers[i]
                 clip_path = clips.get(spk, "")
+                # Skip empty clips (timestamp out of audio range)
+                if clip_path and not os.path.isfile(clip_path):
+                    clip_path = ""
                 sample_texts = samples.get(spk, [])
                 sample_display = "\n".join(
                     f"• {t}" for t in sample_texts if t
@@ -629,6 +654,7 @@ window.addEventListener('message', function(event) {
             console.error('[Parent] Failed to process TIMELINE_SYNC:', e);
         }
     }
+
 });
 </script>
 """,
@@ -688,6 +714,29 @@ window.addEventListener('message', function(event) {
                 placeholder="e.g. ~/Desktop or /Users/name/Documents",
                 info="EAF and PFSX files will be saved here on export.",
             )
+
+            # ---- Segment selection ----
+            segment_enabled = gr.Checkbox(
+                label="⏱️ 启用分段处理（可选，留空则处理全片）",
+                value=False,
+                info="勾选后仅处理指定时间段内的音频",
+            )
+            with gr.Row(visible=False) as segment_inputs_row:
+                segment_start = gr.Textbox(
+                    label="起始时间",
+                    value="00:00",
+                    placeholder="00:00",
+                    scale=1,
+                )
+                segment_end = gr.Textbox(
+                    label="结束时间",
+                    value="",
+                    placeholder="总时长",
+                    scale=1,
+                )
+                segment_hint = gr.Markdown(
+                    value="格式: `mm:ss` 或直接输入秒数",
+                )
 
         # Hidden state: stores parsed tier names from the template EAF
         template_tiers_state = gr.State([])
@@ -843,8 +892,16 @@ window.addEventListener('message', function(event) {
         process_btn.click(
             fn=process_video,
             inputs=[video_input, num_speakers_input, template_eaf_input,
-                    pipeline_state, template_tiers_state],
+                    pipeline_state, template_tiers_state,
+                    segment_enabled, segment_start, segment_end],
             outputs=dynamic_outputs,
+        )
+
+        # Segment checkbox → toggle time inputs visibility
+        segment_enabled.change(
+            fn=lambda enabled: gr.update(visible=enabled),
+            inputs=[segment_enabled],
+            outputs=[segment_inputs_row],
         )
 
         # Advance button → apply mapping, transition Step 3 → Step 4

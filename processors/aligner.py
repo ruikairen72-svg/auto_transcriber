@@ -5,6 +5,8 @@ Also handles extraction of representative audio clips per speaker
 (first complete sentence — most natural for human identification).
 """
 
+from __future__ import annotations
+
 import os
 import subprocess
 
@@ -165,6 +167,21 @@ def _reassign_unknown_speakers(segments: list[dict]) -> list[dict]:
 # Representative audio clip extraction
 # ---------------------------------------------------------------------------
 
+def _get_audio_duration(audio_path: str) -> float | None:
+    """Return audio file duration in seconds, or None if undetermined."""
+    try:
+        result = subprocess.run(
+            ["/opt/homebrew/bin/ffprobe", "-v", "error",
+             "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", audio_path],
+            capture_output=True, text=True, timeout=10,
+        )
+        dur = float(result.stdout.strip())
+        return dur if dur > 0 else None
+    except Exception:
+        return None
+
+
 def extract_speaker_clips(
     audio_path: str,
     aligned_segments: list[dict],
@@ -207,24 +224,49 @@ def extract_speaker_clips(
         if spk not in speaker_first_seg:
             speaker_first_seg[spk] = seg
 
+    # Get actual audio duration for safety clamping
+    audio_dur = _get_audio_duration(audio_path)
+
     clips = {}
     for spk, seg in speaker_first_seg.items():
-        clip_start = seg["start"]
+        clip_start = max(0.0, seg["start"])
         clip_end = min(seg["end"], clip_start + clip_duration)
 
+        # Clamp to audio duration so ffmpeg doesn't produce empty output
+        if audio_dur and clip_start >= audio_dur:
+            # Segment starts after audio ends — skip this speaker
+            print(f"  ⚠️  Speaker {spk}: segment at {clip_start:.1f}s is "
+                  f"beyond audio duration {audio_dur:.1f}s, skipping clip")
+            clips[spk] = ""
+            continue
+        if audio_dur and clip_end > audio_dur:
+            clip_end = audio_dur
+
         out_path = os.path.join(temp_dir, f"clip_{spk}.wav")
+
+        # Place -ss BEFORE -i for fast input seeking (critical for large files)
         cmd = [
             "/opt/homebrew/bin/ffmpeg", "-y",
-            "-i", audio_path,
             "-ss", str(clip_start),
             "-to", str(clip_end),
+            "-i", audio_path,
             "-ac", str(AUDIO_CHANNELS),
             "-ar", str(SAMPLE_RATE),
             "-sample_fmt", "s16",
             out_path,
         ]
-        subprocess.run(cmd, capture_output=True, check=True)
-        clips[spk] = out_path
+        try:
+            subprocess.run(cmd, capture_output=True, check=True, timeout=30)
+            fsize = os.path.getsize(out_path)
+            print(f"  ✅ Clip {spk}: {clip_start:.1f}s–{clip_end:.1f}s → "
+                  f"{out_path} ({fsize} bytes)")
+            clips[spk] = out_path
+        except subprocess.CalledProcessError as exc:
+            print(f"  ❌ ffmpeg failed for {spk}: {exc.stderr.decode()[:200] if exc.stderr else 'no stderr'}")
+            clips[spk] = ""
+        except Exception as exc:
+            print(f"  ❌ Unexpected error for {spk}: {exc}")
+            clips[spk] = ""
 
     return clips
 

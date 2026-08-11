@@ -2,6 +2,8 @@
 Audio extraction from video files using ffmpeg.
 """
 
+from __future__ import annotations
+
 import subprocess
 import os
 from config import SAMPLE_RATE, AUDIO_CHANNELS
@@ -11,7 +13,12 @@ class AudioExtractionError(Exception):
     """Raised when ffmpeg fails to extract audio."""
 
 
-def extract_audio(video_path: str, output_dir: str) -> str:
+def extract_audio(
+    video_path: str,
+    output_dir: str,
+    start_time: float | None = None,
+    end_time: float | None = None,
+) -> str:
     """
     Extract audio from a video file as 16 kHz mono WAV.
 
@@ -21,6 +28,10 @@ def extract_audio(video_path: str, output_dir: str) -> str:
         Path to the input MP4 file.
     output_dir : str
         Directory to write the extracted WAV file into.
+    start_time : float or None
+        Optional start time in seconds for segment extraction.
+    end_time : float or None
+        Optional end time in seconds for segment extraction.
 
     Returns
     -------
@@ -44,6 +55,15 @@ def extract_audio(video_path: str, output_dir: str) -> str:
     cmd = [
         "/opt/homebrew/bin/ffmpeg",
         "-y",                     # overwrite output
+    ]
+
+    # Segment extraction: -ss before -i for fast seeking
+    if start_time is not None:
+        cmd += ["-ss", str(start_time)]
+    if end_time is not None:
+        cmd += ["-to", str(end_time)]
+
+    cmd += [
         "-i", video_path,
         "-ac", str(AUDIO_CHANNELS),
         "-ar", str(SAMPLE_RATE),
