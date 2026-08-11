@@ -127,14 +127,7 @@ button{{cursor:pointer;}}
 .btn-secondary:disabled{{opacity:0.4;cursor:not-allowed;}}
 .btn-secondary:disabled:hover{{background:#0f3460;}}
 
-.tier-list{{display:flex;flex-direction:column;gap:2px;max-height:110px;overflow-y:auto;}}
-.tier-item{{display:flex;align-items:center;gap:6px;font-size:12px;padding:2px 0;}}
-.tier-item input[type=checkbox]{{accent-color:#2196F3;flex-shrink:0;}}
 .tier-color{{width:12px;height:12px;border-radius:3px;flex-shrink:0;}}
-.tree-indent{{display:inline-block;flex-shrink:0;}}
-
-.add-tier-row{{display:flex;gap:4px;}}
-.add-tier-row input{{flex:1;}}
 
 .stat-row{{display:flex;justify-content:space-between;font-size:11px;color:#888;}}
 .search-row{{display:flex;gap:4px;}}
@@ -152,7 +145,7 @@ button{{cursor:pointer;}}
 /* ============================================================
    Timeline Area
    ============================================================ */
-.timeline-container{{flex:1;display:flex;min-height:0;position:relative;}}
+.timeline-container{{flex:1;display:flex;flex-direction:column;min-height:0;position:relative;overflow:hidden;}}
 .tier-labels{{
     flex:0 0 110px;background:#16213e;border-right:2px solid #2a2a4a;
     overflow-y:auto;overflow-x:hidden;z-index:5;
@@ -169,8 +162,8 @@ button{{cursor:pointer;}}
 }}
 .tier-label.hidden-tier{{opacity:0.35;}}
 .tier-label .tier-color{{width:10px;height:10px;border-radius:2px;flex-shrink:0;}}
-.timeline-scroll{{flex:1;overflow:auto;position:relative;scroll-behavior:auto;}}
-.timeline-inner{{position:relative;}}
+.timeline-scroll{{flex:1;overflow-x:auto;overflow-y:auto;min-width:0;min-height:0;position:relative;scroll-behavior:auto;}}
+.timeline-inner{{position:relative;min-width:100%;}}
 .timeline-ruler{{
     position:sticky;top:0;z-index:6;height:28px;cursor:pointer;
     border-bottom:1px solid #2a2a4a;
@@ -232,6 +225,108 @@ button{{cursor:pointer;}}
     display:flex;align-items:center;justify-content:center;height:100%;
     color:#555;font-size:14px;
 }}
+
+/* ============================================================
+   Split-panel dividers
+   ============================================================ */
+.divider {{
+    flex-shrink: 0; z-index: 10; transition: background 0.15s;
+}}
+.divider-vertical {{
+    width: 5px; cursor: col-resize; background: #2a2a4a;
+}}
+.divider-vertical:hover, .divider-vertical.active {{
+    background: #2B5C7E;
+}}
+.divider-horizontal {{
+    height: 5px; cursor: row-resize; background: #2a2a4a;
+}}
+.divider-horizontal:hover, .divider-horizontal.active {{
+    background: #2B5C7E;
+}}
+
+/* ============================================================
+   Layer manager panel
+   ============================================================ */
+.layer-mgr-bar {{
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 8px; background: #16213e; border-bottom: 1px solid #2a2a4a;
+    gap: 8px; flex-shrink: 0; position: relative;
+}}
+.layer-mgr-btn {{
+    background: transparent; color: #8896AB; border: 1px solid #3A3A5A;
+    border-radius: 4px; padding: 2px 12px; font-size: 11px; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+}}
+.layer-mgr-btn:hover {{ background: #2A2A4A; color: #D1D9E6; }}
+.layer-mgr-status {{
+    font-size: 10px; color: #4A5568; white-space: nowrap;
+}}
+.layer-mgr-panel {{
+    position: absolute; top: 100%; left: 0; z-index: 200;
+    width: 300px; max-height: 420px; background: #1E1E32;
+    border: 1px solid #3A3A5A; border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    display: none; flex-direction: column; overflow: hidden;
+}}
+.layer-mgr-panel.show {{ display: flex; }}
+.layer-mgr-panel .panel-head {{
+    display: flex; align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid #2A2A4A;
+}}
+.layer-mgr-panel .panel-head .title {{
+    font-size: 13px; font-weight: 600; color: #fff;
+}}
+.layer-mgr-panel .panel-body {{
+    flex: 1; padding: 10px 14px; overflow-y: auto; max-height: 300px;
+}}
+.layer-mgr-panel .quick-actions {{
+    display: flex; gap: 6px; margin-bottom: 8px;
+}}
+.layer-mgr-panel .quick-actions button {{
+    background: #2A2A4A; color: #D1D9E6; border: none;
+    border-radius: 4px; padding: 3px 10px; font-size: 11px; cursor: pointer;
+}}
+.layer-mgr-panel .quick-actions button:hover {{ background: #3A3A5A; }}
+.layer-mgr-panel .cb-item {{
+    display: flex; align-items: center; padding: 3px 8px; border-radius: 4px;
+    font-size: 12px; color: #D1D9E6; cursor: pointer;
+}}
+.layer-mgr-panel .cb-item:hover {{ background: #2A2A4A; }}
+.layer-mgr-panel .cb-item input[type="checkbox"] {{
+    margin-right: 8px; accent-color: #2B5C7E; width: 14px; height: 14px; flex-shrink: 0;
+}}
+.layer-mgr-panel .cb-item.child {{ padding-left: 26px; font-size: 11px; color: #8896AB; }}
+.layer-mgr-panel .cb-item.hidden-tier {{ color: #4A5568; }}
+.layer-mgr-panel .panel-foot {{
+    display: flex; justify-content: flex-end; gap: 6px;
+    padding: 8px 14px; border-top: 1px solid #2A2A4A;
+}}
+.layer-mgr-panel .panel-foot button {{
+    padding: 4px 16px; border-radius: 4px; font-size: 12px; cursor: pointer;
+}}
+.layer-mgr-panel .btn-apply {{
+    background: #2B5C7E; color: #fff; border: none;
+}}
+.layer-mgr-panel .btn-apply:hover {{ background: #1F4A68; }}
+.layer-mgr-panel .btn-cancel {{
+    background: transparent; color: #8896AB; border: 1px solid #3A3A5A;
+}}
+.layer-mgr-panel .btn-cancel:hover {{ background: #2A2A4A; }}
+
+/* ============================================================
+   Tier drag reorder
+   ============================================================ */
+.tier-label {{ position: relative; }}
+.tier-label .drag-handle {{
+    cursor: grab; color: #4A5568; flex-shrink: 0; font-size: 13px;
+    padding: 0 2px; user-select: none; line-height: 1;
+}}
+.tier-label .drag-handle:hover {{ color: #8896AB; }}
+.tier-label.dragging {{ opacity: 0.4; background: #2A2A4A; }}
+.tier-label.drag-over {{
+    border-top: 2px solid #2B5C7E !important;
+}}
 </style>
 </head>
 <body>
@@ -245,23 +340,16 @@ button{{cursor:pointer;}}
      Top Panel
      ============================================================ -->
 <div class="top-panel" id="topPanel">
-    <div class="video-panel">
+    <div class="video-panel" id="videoPanel">
         <video id="videoPlayer" controls preload="metadata"></video>
     </div>
+    <div class="divider divider-vertical" id="vDivider" title="拖拽调整宽度"></div>
     <div class="control-panel" id="controlPanel">
         <h3>🔄 历史记录</h3>
         <div class="undo-redo-row">
             <button class="btn-secondary" id="btnUndo" disabled>↩ 撤销</button>
             <button class="btn-secondary" id="btnRedo" disabled>↪ 重做</button>
         </div>
-
-        <h3>📋 层管理</h3>
-        <div class="tier-list" id="tierList"></div>
-        <div class="add-tier-row">
-            <input type="text" id="newTierInput" placeholder="新层名称...">
-            <button class="btn-secondary" id="btnAddTier">+ 添加层</button>
-        </div>
-        <button class="btn-danger" id="btnDeleteTier" style="width:100%;">🗑 删除当前层</button>
 
         <h3>🔍 搜索与统计</h3>
         <div class="search-row">
@@ -299,13 +387,40 @@ button{{cursor:pointer;}}
     </div>
 </div>
 
+<div class="divider divider-horizontal" id="hDivider" title="拖拽调整高度"></div>
+
 <!-- ============================================================
      Timeline
      ============================================================ -->
 <div class="timeline-container" id="timelineContainer">
-    <div class="tier-labels" id="tierLabels">
-        <div class="label-spacer">⏱</div>
+    <!-- Layer manager bar -->
+    <div class="layer-mgr-bar" id="layerMgrBar">
+        <div style="display:flex;align-items:center;gap:6px;">
+            <button class="layer-mgr-btn" id="layerMgrBtn">📋 层管理 <span style="font-size:9px;">▼</span></button>
+            <span class="layer-mgr-status" id="layerMgrStatus">全部显示</span>
+        </div>
+        <!-- Layer manager popup -->
+        <div class="layer-mgr-panel" id="layerMgrPanel">
+            <div class="panel-head">
+                <span class="title">📋 层管理</span>
+            </div>
+            <div class="panel-body">
+                <div class="quick-actions">
+                    <button id="btnAllShow">☑ 全部显示</button>
+                    <button id="btnAllHide">☐ 全部隐藏</button>
+                </div>
+                <div id="layerMgrCheckboxes"></div>
+            </div>
+            <div class="panel-foot">
+                <button class="btn-cancel" id="btnLayerCancel">取消</button>
+                <button class="btn-apply" id="btnLayerApply">✅ 应用</button>
+            </div>
+        </div>
     </div>
+    <div style="position:relative;display:flex;flex:1;min-height:0;">
+        <div class="tier-labels" id="tierLabels">
+            <div class="label-spacer">⏱</div>
+        </div>
     <div class="timeline-scroll" id="timelineScroll">
         <div class="timeline-inner" id="timelineInner">
             <div class="timeline-ruler" id="timelineRuler">
@@ -314,6 +429,7 @@ button{{cursor:pointer;}}
         </div>
         <div class="playhead" id="playhead"></div>
     </div>
+    </div><!-- close inner flex wrapper -->
 </div>
 
 <script>
@@ -325,10 +441,34 @@ const EDITOR_DATA = {data_json};
 // ============================================================
 // Constants
 // ============================================================
-const TIER_COLORS = [
-    '#4CAF50','#2196F3','#FF9800','#9C27B0','#F44336',
-    '#00BCD4','#FFEB3B','#FF5722','#607D8B','#8BC34A',
+const COLOR_PALETTE = [
+    '#4FC3F7','#81C784','#FFB74D','#F06292','#CE93D8',
+    '#4DD0E1','#AED581','#FF8A65','#9575CD','#4DB6AC',
+    '#DCE775','#FFD54F','#A1887F','#90A4AE','#EF5350',
+    '#26A69A','#BA68C8','#64B5F6','#FFAB91','#BCAAA4',
 ];
+
+// Stable color assignment based on tier name (order-independent)
+const _tierColorCache = {{}};
+function getTierColor(tierName) {{
+    if (_tierColorCache[tierName]) return _tierColorCache[tierName];
+    var hash = 0;
+    for (var i = 0; i < tierName.length; i++) {{
+        hash = tierName.charCodeAt(i) + ((hash << 5) - hash);
+    }}
+    _tierColorCache[tierName] = COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
+    return _tierColorCache[tierName];
+}}
+
+function darkenColor(hex, amount) {{
+    var r = parseInt(hex.slice(1,3), 16);
+    var g = parseInt(hex.slice(3,5), 16);
+    var b = parseInt(hex.slice(5,7), 16);
+    r = Math.floor(r * (1 - amount));
+    g = Math.floor(g * (1 - amount));
+    b = Math.floor(b * (1 - amount));
+    return '#' + r.toString(16).padStart(2,'0') + g.toString(16).padStart(2,'0') + b.toString(16).padStart(2,'0');
+}}
 const MIN_ZOOM = 10; const MAX_ZOOM = 500; const DEFAULT_ZOOM = 50;
 const SNAP = 0.1; const ROW_H = 44;
 const MAX_HISTORY = 50;
@@ -361,7 +501,6 @@ const timelineRuler = $('timelineRuler');
 const rulerCanvas = $('rulerCanvas');
 const tierLabels = $('tierLabels');
 const playhead = $('playhead');
-const tierList = $('tierList');
 const editSection = $('editSection');
 const noSelection = $('noSelection');
 
@@ -399,6 +538,8 @@ function undo() {{
     tiers = state.tiers;
     hiddenTiers = new Set(state.hiddenTiers || []);
     collapsedTiers = new Set(state.collapsedTiers || []);
+    saveTierOrder(tiers);
+    localStorage.setItem('hiddenTiers', JSON.stringify(Array.from(hiddenTiers)));
     deselectAll();
     renderAll();
     syncToParent();
@@ -418,6 +559,8 @@ function redo() {{
     tiers = state.tiers;
     hiddenTiers = new Set(state.hiddenTiers || []);
     collapsedTiers = new Set(state.collapsedTiers || []);
+    saveTierOrder(tiers);
+    localStorage.setItem('hiddenTiers', JSON.stringify(Array.from(hiddenTiers)));
     deselectAll();
     renderAll();
     syncToParent();
@@ -503,6 +646,227 @@ function getRootTiers() {{
     return tiers.filter(function(t) {{ return TIER_HIERARCHY[t] == null; }});
 }}
 
+// ============================================================
+// Tier order (persisted via localStorage)
+// ============================================================
+function getTierOrder() {{
+    var saved = localStorage.getItem('tierOrder');
+    try {{
+        if (saved) {{
+            var arr = JSON.parse(saved);
+            // Filter to only tiers that still exist, append any new ones
+            var result = arr.filter(function(t) {{ return tiers.includes(t); }});
+            tiers.forEach(function(t) {{
+                if (!result.includes(t)) result.push(t);
+            }});
+            return result;
+        }}
+    }} catch(e) {{ /* ignore */ }}
+    return tiers.slice();
+}}
+
+function saveTierOrder(order) {{
+    localStorage.setItem('tierOrder', JSON.stringify(order));
+}}
+
+function reorderTiers(srcTier, dstTier) {{
+    var order = getTierOrder();
+    var si = order.indexOf(srcTier);
+    var di = order.indexOf(dstTier);
+    if (si === -1 || di === -1 || si === di) return;
+    order.splice(si, 1);
+    order.splice(di, 0, srcTier);
+    saveTierOrder(order);
+    // Update global tiers array to reflect new order
+    tiers = order;
+    deselectAll();
+    renderAll();
+    syncToParent();
+}}
+
+// ============================================================
+// Split-panel drag-to-resize
+// ============================================================
+function initSplitPanels() {{
+    var vDivider = $('vDivider');
+    var hDivider = $('hDivider');
+    var videoPanel = $('videoPanel');
+    var controlPanel = $('controlPanel');
+    var topPanel = $('topPanel');
+    var timelineContainer = $('timelineContainer');
+
+    // Restore saved proportions
+    var savedV = localStorage.getItem('videoPanelFlex');
+    var savedH = localStorage.getItem('topPanelHeight');
+    if (savedV) videoPanel.style.flex = savedV;
+    if (savedH) topPanel.style.flex = savedH;
+
+    // ---- Vertical divider (video ↔ controls) ----
+    var vDragging = false;
+    vDivider.addEventListener('mousedown', function(e) {{
+        e.preventDefault();
+        vDragging = true;
+        vDivider.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    }});
+    document.addEventListener('mousemove', function(e) {{
+        if (!vDragging) return;
+        var rect = topPanel.getBoundingClientRect();
+        var x = e.clientX - rect.left;
+        var pct = Math.min(Math.max(x / rect.width * 100, 20), 75);
+        videoPanel.style.flex = '0 0 ' + pct + '%';
+        controlPanel.style.flex = '0 0 ' + (100 - pct) + '%';
+    }});
+    document.addEventListener('mouseup', function() {{
+        if (vDragging) {{
+            vDragging = false;
+            vDivider.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('videoPanelFlex', videoPanel.style.flex);
+            // Re-render ruler after resize
+            renderTimeline();
+        }}
+    }});
+
+    // ---- Horizontal divider (top panel ↔ timeline) ----
+    var hDragging = false;
+    hDivider.addEventListener('mousedown', function(e) {{
+        e.preventDefault();
+        hDragging = true;
+        hDivider.classList.add('active');
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+    }});
+    document.addEventListener('mousemove', function(e) {{
+        if (!hDragging) return;
+        var rect = document.body.getBoundingClientRect();
+        var y = e.clientY - rect.top;
+        var h = Math.min(Math.max(y, 120), rect.height * 0.6);
+        topPanel.style.flex = '0 0 ' + h + 'px';
+        timelineContainer.style.flex = '1';
+    }});
+    document.addEventListener('mouseup', function() {{
+        if (hDragging) {{
+            hDragging = false;
+            hDivider.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            localStorage.setItem('topPanelHeight', topPanel.style.flex);
+            // Re-render ruler after resize
+            renderTimeline();
+        }}
+    }});
+}}
+
+// ============================================================
+// Layer manager panel
+// ============================================================
+var _pendingVisibility = null;
+
+function toggleLayerManager() {{
+    var panel = $('layerMgrPanel');
+    if (panel.classList.contains('show')) {{
+        // Close — discard pending changes
+        panel.classList.remove('show');
+        _pendingVisibility = null;
+    }} else {{
+        // Open — clone current visibility into pending
+        _pendingVisibility = new Set(hiddenTiers);
+        panel.classList.add('show');
+        renderLayerMgrCheckboxes();
+    }}
+}}
+
+function applyLayerVisibility() {{
+    if (!_pendingVisibility) return;
+    hiddenTiers = new Set(_pendingVisibility);
+    localStorage.setItem('hiddenTiers', JSON.stringify(Array.from(hiddenTiers)));
+    _pendingVisibility = null;
+    $('layerMgrPanel').classList.remove('show');
+    renderAll();
+    updateLayerMgrStatus();
+}}
+
+function cancelLayerVisibility() {{
+    $('layerMgrPanel').classList.remove('show');
+    _pendingVisibility = null;
+}}
+
+function renderLayerMgrCheckboxes() {{
+    var container = $('layerMgrCheckboxes');
+    container.innerHTML = '';
+    var ordered = getTierOrder();
+    ordered.forEach(function(tierName) {{
+        var isHid = _pendingVisibility ? _pendingVisibility.has(tierName) : hiddenTiers.has(tierName);
+        var level = getTierLevel(tierName);
+        var div = document.createElement('div');
+        div.className = 'cb-item';
+        if (level > 0) div.classList.add('child');
+        if (isHid) div.classList.add('hidden-tier');
+
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !isHid;
+        cb.addEventListener('change', function() {{
+            if (_pendingVisibility) {{
+                if (cb.checked) _pendingVisibility.delete(tierName);
+                else _pendingVisibility.add(tierName);
+            }}
+            renderLayerMgrCheckboxes();
+            updateLayerMgrStatusPreview();
+        }});
+        div.appendChild(cb);
+        div.appendChild(document.createTextNode(tierName));
+        container.appendChild(div);
+    }});
+}}
+
+function updateLayerMgrStatus() {{
+    var total = tiers.length;
+    var visible = total - hiddenTiers.size;
+    var el = $('layerMgrStatus');
+    if (!el) return;
+    if (visible === total) el.textContent = '全部显示';
+    else if (visible === 0) el.textContent = '全部隐藏';
+    else el.textContent = visible + '/' + total + ' 显示';
+}}
+
+function updateLayerMgrStatusPreview() {{
+    if (!_pendingVisibility) return;
+    var total = tiers.length;
+    var visible = total - _pendingVisibility.size;
+    var el = $('layerMgrStatus');
+    if (!el) return;
+    if (visible === total) el.textContent = '全部显示';
+    else if (visible === 0) el.textContent = '全部隐藏';
+    else el.textContent = visible + '/' + total + ' 显示';
+}}
+
+function showAllTiers() {{
+    _pendingVisibility = new Set();
+    renderLayerMgrCheckboxes();
+    updateLayerMgrStatusPreview();
+}}
+
+function hideAllTiers() {{
+    _pendingVisibility = new Set(tiers);
+    renderLayerMgrCheckboxes();
+    updateLayerMgrStatusPreview();
+}}
+
+function getTierLevel(tierName) {{
+    // Compute nesting level from TIER_HIERARCHY
+    var level = 0;
+    var parent = TIER_HIERARCHY[tierName];
+    while (parent) {{
+        level++;
+        parent = TIER_HIERARCHY[parent];
+    }}
+    return level;
+}}
+
 function toggleTierCollapse(tierName) {{
     if (collapsedTiers.has(tierName)) {{
         collapsedTiers.delete(tierName);
@@ -544,13 +908,16 @@ function renderTimelineRow(tierName, level, sortIndex) {{
 }}
 
 // Render one tier label + its children (if expanded) into the left sidebar
-function renderLabelNode(tierName, level, colorIdx) {{
+function renderLabelNode(tierName, level) {{
     if (hiddenTiers.has(tierName)) return;
+    var color = getTierColor(tierName);
     var indentPx = 8 + level * 18;
     var div = document.createElement('div');
     div.className = 'tier-label';
     div.dataset.tier = tierName;
     div.style.paddingLeft = indentPx + 'px';
+    div.style.borderLeft = '3px solid ' + color;
+    div.draggable = true;
 
     var toggleHtml = '';
     if (hasChildren(tierName)) {{
@@ -560,10 +927,44 @@ function renderLabelNode(tierName, level, colorIdx) {{
         toggleHtml = '<span style=\"flex-shrink:0;width:14px;\"></span>';
     }}
     var prefix = level > 0 ? '<span style=\"color:#555;flex-shrink:0;\">└</span>' : '';
-    div.innerHTML = toggleHtml + prefix + '<span class=\"tier-color\" style=\"background:' + tierColor(colorIdx) + '\"></span>' + tierName;
+
+    // Drag handle
+    var handleHtml = '<span class=\"drag-handle\" title=\"拖拽调整顺序\">⠿</span>';
+
+    div.innerHTML = toggleHtml + prefix + handleHtml +
+        '<span class=\"tier-color\" style=\"background:' + color + '\"></span>' + tierName;
+
+    // Drag-and-drop events for tier reorder
+    div.addEventListener('dragstart', function(e) {{
+        e.dataTransfer.setData('text/plain', tierName);
+        e.dataTransfer.effectAllowed = 'move';
+        div.classList.add('dragging');
+    }});
+    div.addEventListener('dragend', function() {{
+        div.classList.remove('dragging');
+        // Remove all drag-over highlights
+        tierLabels.querySelectorAll('.drag-over').forEach(function(el) {{ el.classList.remove('drag-over'); }});
+    }});
+    div.addEventListener('dragover', function(e) {{
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (!div.classList.contains('dragging')) div.classList.add('drag-over');
+    }});
+    div.addEventListener('dragleave', function() {{
+        div.classList.remove('drag-over');
+    }});
+    div.addEventListener('drop', function(e) {{
+        e.preventDefault();
+        div.classList.remove('drag-over');
+        var srcTier = e.dataTransfer.getData('text/plain');
+        var dstTier = tierName;
+        if (srcTier && srcTier !== dstTier) {{
+            reorderTiers(srcTier, dstTier);
+        }}
+    }});
 
     div.addEventListener('click', function(e) {{
-        if (e.target.classList.contains('tier-toggle')) return;
+        if (e.target.classList.contains('tier-toggle') || e.target.classList.contains('drag-handle')) return;
         if (hasChildren(tierName)) {{
             toggleTierCollapse(tierName);
         }} else {{
@@ -577,44 +978,12 @@ function renderLabelNode(tierName, level, colorIdx) {{
     if (!collapsedTiers.has(tierName)) {{
         var children = getChildren(tierName);
         children.forEach(function(child) {{
-            renderLabelNode(child, level + 1, colorIdx);
+            renderLabelNode(child, level + 1);
         }});
     }}
 }}
 
 // Render one tier checkbox item + its children (if expanded) into the control panel
-function renderCheckboxNode(tierName, level, colorIdx) {{
-    if (hiddenTiers.has(tierName)) return;
-    var indent = level * 18;
-    var prefix = '';
-    if (level > 0) {{
-        prefix = '<span class=\"tree-indent\" style=\"width:' + (level*16) + 'px;display:inline-block;flex-shrink:0;\"></span>' +
-                 '<span style=\"color:#555;flex-shrink:0;\">└</span>';
-    }}
-    var toggleHtml = '';
-    if (hasChildren(tierName)) {{
-        toggleHtml = '<span class=\"tier-toggle-list\" data-tier=\"' + tierName + '\" style=\"cursor:pointer;flex-shrink:0;width:14px;text-align:center;font-size:10px;\">' +
-            (collapsedTiers.has(tierName) ? '▶' : '▼') + '</span>';
-    }} else {{
-        toggleHtml = '<span style=\"flex-shrink:0;width:14px;\"></span>';
-    }}
-    var checkbox = '<input type=\"checkbox\" data-tier=\"' + tierName + '\" ' + (hiddenTiers.has(tierName) ? '' : 'checked') + '>';
-    tierList.insertAdjacentHTML('beforeend',
-        '<div class=\"tier-item\">' + toggleHtml + prefix + checkbox +
-        '<span class=\"tier-color\" style=\"background:' + tierColor(colorIdx) + '\"></span>' +
-        '<span style=\"flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;\">' + tierName + '</span>' +
-        '<span style=\"color:#666;font-size:10px;\">' + tierSegCount(tierName) + '</span>' +
-        '</div>');
-
-    // Recursively render children if expanded
-    if (!collapsedTiers.has(tierName)) {{
-        var children = getChildren(tierName);
-        children.forEach(function(child) {{
-            renderCheckboxNode(child, level + 1, colorIdx);
-        }});
-    }}
-}}
-
 // ============================================================
 // Error display
 // ============================================================
@@ -623,12 +992,21 @@ function showErrorBar(msg) {{
     var span = $('errorMsg');
     span.textContent = msg;
     bar.classList.add('show');
-    console.error('[Timeline Editor]', msg);
+    console.log('[Timeline Editor]', msg);
+    // Auto-dismiss after 2.5 seconds
+    if (window._errorBarTimer) clearTimeout(window._errorBarTimer);
+    window._errorBarTimer = setTimeout(function() {{
+        bar.classList.remove('show');
+    }}, 2500);
 }}
 
 function hideErrorBar() {{
     var bar = $('errorBar');
     bar.classList.remove('show');
+    if (window._errorBarTimer) {{
+        clearTimeout(window._errorBarTimer);
+        window._errorBarTimer = null;
+    }}
 }}
 
 // ============================================================
@@ -642,6 +1020,13 @@ function init() {{
         var tn = s.tierName || s.speaker || 'UNKNOWN';
         if (!tiers.includes(tn)) tiers.push(tn);
     }});
+    // Restore tier order from localStorage
+    tiers = getTierOrder();
+    // Restore hidden tiers from localStorage
+    try {{
+        var savedHidden = JSON.parse(localStorage.getItem('hiddenTiers') || '[]');
+        hiddenTiers = new Set(savedHidden.filter(function(t) {{ return tiers.includes(t); }}));
+    }} catch(e) {{ /* ignore */ }}
     // Load segments with unique ids
     segments = EDITOR_DATA.segments.map(function(s, i) {{
         return {{
@@ -655,41 +1040,18 @@ function init() {{
         }};
     }});
     _segCounter = segments.length + 1;
-    updateTierCheckboxes();
     updateTierDropdown();
     updateStats();
     renderAll();
     bindEvents();
     updateUndoButtons();
+    initSplitPanels();
+    updateLayerMgrStatus();
 }}
 
 // ============================================================
 // Tier management
 // ============================================================
-function updateTierCheckboxes() {{
-    tierList.innerHTML = '';
-    var roots = getRootTiers();
-    roots.forEach(function(root, idx) {{
-        renderCheckboxNode(root, 0, idx);
-    }});
-    // Bind checkbox events
-    tierList.querySelectorAll('input[type=checkbox]').forEach(function(cb) {{
-        cb.addEventListener('change', function() {{
-            var t = cb.dataset.tier;
-            if (cb.checked) hiddenTiers.delete(t);
-            else hiddenTiers.add(t);
-            renderAll();
-        }});
-    }});
-    // Bind toggle icon clicks in tier list
-    tierList.querySelectorAll('.tier-toggle-list').forEach(function(el) {{
-        el.addEventListener('click', function(e) {{
-            e.stopPropagation();
-            toggleTierCollapse(el.dataset.tier);
-        }});
-    }});
-}}
-
 function updateTierDropdown() {{
     var sel = $('editTier');
     var cur = sel.value;
@@ -704,8 +1066,8 @@ function updateTierLabels() {{
     tierLabels.innerHTML = '';
     tierLabels.appendChild(spacer);
     var roots = getRootTiers();
-    roots.forEach(function(root, idx) {{
-        renderLabelNode(root, 0, idx);
+    roots.forEach(function(root) {{
+        renderLabelNode(root, 0);
     }});
     // Bind toggle icon clicks (stop propagation to avoid double-fire)
     tierLabels.querySelectorAll('.tier-toggle').forEach(function(el) {{
@@ -716,8 +1078,6 @@ function updateTierLabels() {{
     }});
 }}
 
-function tierColor(idx) {{ return TIER_COLORS[idx % TIER_COLORS.length]; }}
-function tierColorForName(name) {{ return TIER_COLORS[tiers.indexOf(name) % TIER_COLORS.length]; }}
 function tierIndex(name) {{
     // Find DOM row index — used for color assignment and other lookup tasks
     var rows = timelineInner.querySelectorAll('.tier-row');
@@ -744,10 +1104,10 @@ function fmtTime(sec) {{
 function renderAll() {{
     renderTimeline();
     renderPlayhead();
-    updateTierCheckboxes();
     updateTierDropdown();
     updateTierLabels();
     updateStats();
+    updateLayerMgrStatus();
 }}
 
 function renderTimeline() {{
@@ -828,8 +1188,9 @@ function renderSegment(sid) {{
     var w = Math.max(t2px(seg.end - seg.start), 18);
     el.style.left = left + 'px';
     el.style.width = w + 'px';
-    el.style.backgroundColor = tierColor(ti) + '99';
-    el.style.borderColor = tierColor(ti);
+    var segColor = getTierColor(seg.tier);
+    el.style.backgroundColor = segColor + '99';
+    el.style.borderColor = darkenColor(segColor, 0.3);
 
     el.classList.toggle('selected', seg.id === selectedId);
 
@@ -1065,33 +1426,6 @@ function bindEvents() {{
         console.log('[分词] 完成, 结果:', seg.text.substring(0, 60));
     }});
 
-    $('btnAddTier').addEventListener('click', function() {{
-        var name = $('newTierInput').value.trim();
-        if (name && !tiers.includes(name)) {{
-            saveUndoState();
-            tiers.push(name);
-            $('newTierInput').value = '';
-            renderAll();
-        }}
-    }});
-    $('btnDeleteTier').addEventListener('click', function() {{
-        if (!selectedId) {{ alert('请先选择一个标注以指定要删除的层'); return; }}
-        var seg = segments.find(function(s) {{ return s.id === selectedId; }});
-        if (!seg) return;
-        var tier = seg.tier;
-        if (!confirm('确定删除层 "' + tier + '" 及其所有 ' + tierSegCount(tier) + ' 个标注吗？')) return;
-        saveUndoState();
-        // Remove segments in this tier
-        segments = segments.filter(function(s) {{ return s.tier !== tier; }});
-        tiers = tiers.filter(function(t) {{ return t !== tier; }});
-        hiddenTiers.delete(tier);
-        deselectAll();
-        renderAll();
-    }});
-    $('newTierInput').addEventListener('keydown', function(e) {{
-        if (e.key === 'Enter') $('btnAddTier').click();
-    }});
-
     // Undo / Redo buttons
     $('btnUndo').addEventListener('click', undo);
     $('btnRedo').addEventListener('click', redo);
@@ -1186,6 +1520,24 @@ function bindEvents() {{
         scrollSyncing = true;
         timelineScroll.scrollTop = tierLabels.scrollTop;
         scrollSyncing = false;
+    }});
+
+    // ---- Layer manager panel ----
+    $('layerMgrBtn').addEventListener('click', toggleLayerManager);
+    $('btnLayerCancel').addEventListener('click', cancelLayerVisibility);
+    $('btnLayerApply').addEventListener('click', applyLayerVisibility);
+    $('btnAllShow').addEventListener('click', showAllTiers);
+    $('btnAllHide').addEventListener('click', hideAllTiers);
+
+    // Click outside layer manager panel to close (discard changes)
+    document.addEventListener('click', function(e) {{
+        var panel = $('layerMgrPanel');
+        var btn = $('layerMgrBtn');
+        if (panel && panel.classList.contains('show') &&
+            !panel.contains(e.target) &&
+            !btn.contains(e.target)) {{
+            cancelLayerVisibility();
+        }}
     }});
 }}
 

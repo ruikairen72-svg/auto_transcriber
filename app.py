@@ -88,25 +88,90 @@ def parse_time_to_seconds(time_str: str | None) -> float | None:
 # CSS — clean, professional look for linguistics annotation work
 # ---------------------------------------------------------------------------
 CUSTOM_CSS = """
-.gradio-container { max-width: 1400px !important; margin: 0 auto !important; }
+/* ============================================================
+   Global — typography, background
+   ============================================================ */
+.gradio-container {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+}
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f8fafc;
+}
+
+/* ============================================================
+   Headings
+   ============================================================ */
+h1, h2, h3 {
+    color: #0b1a2b !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* ============================================================
+   Cards & panels
+   ============================================================ */
 .speaker-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
+    border: 1px solid #e9edf2;
+    border-radius: 16px;
     padding: 20px;
     margin: 10px 0;
-    background: #fafafa;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     transition: box-shadow 0.2s;
 }
-.speaker-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.speaker-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
 .speaker-header {
-    font-size: 1.1em; font-weight: 600; color: #333;
+    font-size: 1.1em; font-weight: 600; color: #1a3a5c;
     margin-bottom: 8px; padding-bottom: 8px;
     border-bottom: 2px solid #2196F3;
 }
-.instruction-box {
-    background: #e3f2fd; border-left: 4px solid #2196F3;
-    padding: 12px 16px; border-radius: 4px; margin: 12px 0;
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.gr-button-primary, button.primary, .gr-btn-primary {
+    background: #1a3a5c !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 24px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
 }
+.gr-button-primary:hover, button.primary:hover {
+    background: #234d74 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26,58,92,0.3) !important;
+}
+
+/* ============================================================
+   Instruction / info boxes
+   ============================================================ */
+.instruction-box {
+    background: #e3f2fd;
+    border-left: 4px solid #2196F3;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
+}
+
+/* ============================================================
+   Form elements
+   ============================================================ */
+input, select, textarea {
+    border-radius: 8px !important;
+    border: 1px solid #d1d9e6 !important;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: #2196F3 !important;
+    box-shadow: 0 0 0 3px rgba(33,150,243,0.12) !important;
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
 footer { visibility: hidden; }
 """
 
@@ -816,7 +881,7 @@ window.addEventListener('message', function(event) {
             video_player = gr.Video(
                 label="",
                 interactive=True,
-                height=240,
+                height=400,
                 visible=False,
             )
             timeline_html = gr.HTML(
