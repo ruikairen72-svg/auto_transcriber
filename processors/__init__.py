@@ -68,28 +68,28 @@ def run_pipeline(video_path: str, temp_dir: str, hf_token: str = None,
 
     # 1. Extract audio
     if progress_callback:
-        progress_callback(0.12, "🔊 Extracting audio...")
+        progress_callback(0.12, "Extracting audio...")
     audio_path = extract_audio(video_path, temp_dir,
                                start_time=start_time, end_time=end_time)
 
     # 2. Transcribe
     if progress_callback:
-        progress_callback(0.28, "📝 Transcribing (faster-whisper)...")
+        progress_callback(0.28, "Transcribing (faster-whisper)...")
     segments = transcribe(audio_path)
 
     # 3. Diarize
     if progress_callback:
-        progress_callback(0.48, "👥 Speaker diarization (pyannote.audio)...")
+        progress_callback(0.48, "Speaker diarization (pyannote.audio)...")
     diarization = diarize(audio_path, hf_token, num_speakers=num_speakers)
 
     # 4. Align — intersect whisper segments with pyannote speaker turns
     if progress_callback:
-        progress_callback(0.64, "🔗 Aligning timestamps...")
+        progress_callback(0.64, "Aligning timestamps...")
     aligned = align_segments(segments, diarization)
 
     # 5. Punctuation restoration — FunASR ct-punc + Chinese→English mapping
     if progress_callback:
-        progress_callback(0.76, "📖 Restoring punctuation (FunASR ct-punc)...")
+        progress_callback(0.76, "Restoring punctuation (FunASR ct-punc)...")
     aligned = restore_punctuation(aligned)
 
     # Collect unique speakers in order of first appearance
@@ -103,7 +103,7 @@ def run_pipeline(video_path: str, temp_dir: str, hf_token: str = None,
     #    IMPORTANT: must happen BEFORE timestamp adjustment so clip
     #    timestamps match the extracted audio (not the original video).
     if progress_callback:
-        progress_callback(0.82, "✂️ Extracting speaker clips...")
+        progress_callback(0.82, "Extracting speaker clips...")
     clips = extract_speaker_clips(audio_path, aligned, temp_dir)
 
     # 7. Collect 2-3 transcript samples per speaker (for UI display)

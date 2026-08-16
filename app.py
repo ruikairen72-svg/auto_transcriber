@@ -77,6 +77,7 @@ from timeline_editor import build_timeline_html
 # Persistence — save/load work progress (HTTP routes on the Gradio FastAPI app)
 # ---------------------------------------------------------------------------
 SAVES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 
 def parse_time_to_seconds(time_str: str | None) -> float | None:
@@ -91,73 +92,110 @@ def parse_time_to_seconds(time_str: str | None) -> float | None:
 
 
 # ---------------------------------------------------------------------------
-# CSS — clean, professional look for linguistics annotation work
+# CSS — Apple-style UI (Apple Human Interface Guidelines: clarity, deference,
+# depth).  The Step-4 timeline editor runs inside a sandboxed iframe and keeps
+# its own dark professional theme (#1A1A2E) — untouched by this stylesheet.
 # ---------------------------------------------------------------------------
 CUSTOM_CSS = """
 /* ============================================================
    Global — typography, background
    ============================================================ */
+body, .gradio-container {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif !important;
+    background-color: #F5F5F7 !important;
+    color: #1C1C1E !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
 .gradio-container {
     max-width: 1400px !important;
     margin: 0 auto !important;
-    padding: 20px !important;
-}
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #f8fafc;
+    padding: 20px 24px !important;
+    background: #F5F5F7 !important;
 }
 
 /* ============================================================
    Headings
    ============================================================ */
-h1, h2, h3 {
-    color: #0b1a2b !important;
+h1, h2, h3, h4, .gr-markdown h1, .gr-markdown h2, .gr-markdown h3 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
     font-weight: 600 !important;
     letter-spacing: -0.02em !important;
+    color: #1C1C1E !important;
 }
+h1 { font-size: 28px !important; }
+h2 { font-size: 22px !important; }
+h3 { font-size: 18px !important; }
 
 /* ============================================================
    Cards & panels
    ============================================================ */
+.block, .panel, .gr-box, .gr-card {
+    background: #FFFFFF !important;
+    border-radius: 14px !important;
+    border: none !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04) !important;
+    padding: 20px 24px !important;
+    transition: box-shadow 0.2s ease !important;
+}
+.block:hover, .panel:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06) !important;
+}
 .speaker-card {
-    border: 1px solid #e9edf2;
+    border: 1px solid #E5E5EA;
     border-radius: 16px;
     padding: 20px;
     margin: 10px 0;
-    background: #fff;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    transition: box-shadow 0.2s;
+    background: #FFFFFF;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s ease;
 }
-.speaker-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+.speaker-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
 .speaker-header {
-    font-size: 1.1em; font-weight: 600; color: #1a3a5c;
+    font-size: 1.1em; font-weight: 600; color: #1C1C1E;
     margin-bottom: 8px; padding-bottom: 8px;
-    border-bottom: 2px solid #2196F3;
+    border-bottom: 2px solid #007AFF;
 }
 
 /* ============================================================
-   Buttons
+   Buttons — Gradio 4 renders primary/secondary as ``button.primary``
+   and ``button.secondary``; .gr-button-* kept for older versions.
    ============================================================ */
-.gr-button-primary, button.primary, .gr-btn-primary {
-    background: #1a3a5c !important;
+.gr-button {
     border: none !important;
     border-radius: 8px !important;
-    padding: 10px 24px !important;
-    font-weight: 600 !important;
-    transition: all 0.2s !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    padding: 8px 20px !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+}
+.gr-button-primary, button.primary, .gr-btn-primary {
+    background: #007AFF !important;
+    color: #FFFFFF !important;
 }
 .gr-button-primary:hover, button.primary:hover {
-    background: #234d74 !important;
+    background: #0066D9 !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(26,58,92,0.3) !important;
+    box-shadow: 0 4px 12px rgba(0,122,255,0.3) !important;
+}
+.gr-button-primary:active, button.primary:active {
+    transform: scale(0.98);
+}
+.gr-button-secondary, button.secondary {
+    background: #F0F0F2 !important;
+    color: #1C1C1E !important;
+}
+.gr-button-secondary:hover, button.secondary:hover {
+    background: #E5E5EA !important;
 }
 
 /* ============================================================
    Instruction / info boxes
    ============================================================ */
 .instruction-box {
-    background: #e3f2fd;
-    border-left: 4px solid #2196F3;
+    background: #F0F7FF;
+    border-left: 4px solid #007AFF;
     padding: 12px 16px;
     border-radius: 8px;
     margin: 12px 0;
@@ -166,13 +204,183 @@ h1, h2, h3 {
 /* ============================================================
    Form elements
    ============================================================ */
-input, select, textarea {
+/* NOTE: checkboxes/radios are excluded from the text-input rules below —
+   gradio draws its checkmark as ``background-image`` on ``input:checked``,
+   and a shorthand ``background`` here would erase it (invisible checkmark). */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea, .gr-textbox, .gr-dropdown {
     border-radius: 8px !important;
-    border: 1px solid #d1d9e6 !important;
+    border: 1px solid #E5E5EA !important;
+    background: #FFFFFF !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
-input:focus, select:focus, textarea:focus {
-    border-color: #2196F3 !important;
-    box-shadow: 0 0 0 3px rgba(33,150,243,0.12) !important;
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
+    border-color: #007AFF !important;
+    box-shadow: 0 0 0 3px rgba(0,122,255,0.15) !important;
+    outline: none !important;
+}
+/* Checkbox — render natively (appearance:auto) so the browser paints the
+   checkmark itself; ``accent-color`` tints it Apple Blue in Safari/Chrome. */
+input[type="checkbox"] {
+    appearance: auto !important;
+    -webkit-appearance: auto !important;
+    accent-color: #007AFF !important;
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+    flex-shrink: 0;
+}
+input[type="range"] {
+    accent-color: #007AFF !important;
+}
+
+/* ============================================================
+   Labels & secondary text
+   ============================================================ */
+label, .gr-form-label, .gr-label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #6C6C70 !important;
+}
+
+/* ============================================================
+   Tabs
+   ============================================================ */
+.tabs {
+    border-bottom: 1px solid #E5E5EA !important;
+}
+.tab-nav {
+    background: transparent !important;
+}
+.tab-nav button {
+    background: transparent !important;
+    color: #6C6C70 !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+}
+.tab-nav button.selected {
+    color: #007AFF !important;
+    border-bottom: 2px solid #007AFF !important;
+}
+
+/* ============================================================
+   Progress bar
+   ============================================================ */
+.progress-bar {
+    background: #E5E5EA !important;
+    border-radius: 4px !important;
+}
+.progress-bar .progress-fill {
+    background: #007AFF !important;
+    border-radius: 4px !important;
+}
+
+/* ============================================================
+   Toast / alerts
+   ============================================================ */
+.gr-toast, .toast-wrap {
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.12) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif !important;
+}
+
+/* ============================================================
+   Status bar
+   ============================================================ */
+.status-bar {
+    background: #F5F5F7 !important;
+    border-radius: 10px !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    color: #6C6C70 !important;
+    border: none !important;
+}
+
+/* ============================================================
+   Scrollbars
+   ============================================================ */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #F0F0F2;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+    background: #C7C7CC;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #AEAEB2;
+}
+
+/* ============================================================
+   Brand bar & step headings (SVG icon styling)
+   ============================================================ */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 10px 0;
+}
+.brand svg { flex-shrink: 0; }
+.brand-name {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #1C1C1E;
+}
+.brand-version {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6C6C70;
+    background: #F0F0F2;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.step-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #1C1C1E;
+    margin: 0 0 12px 0;
+}
+.step-heading svg { flex-shrink: 0; }
+
+/* ============================================================
+   Button icons — CSS mask (data-URI SVG), NOT an <img>:
+   gradio's ``icon=`` param serves the file as application/octet-stream
+   on macOS (mimetypes has no .svg entry) and Safari refuses to render
+   it, showing a "?" broken-image glyph before the button text.
+   A mask icon is painted with ``currentColor`` — white on primary
+   buttons, dark on secondary — and needs no network request.
+   ============================================================ */
+button.btn-with-icon::before {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-right: 7px;
+    vertical-align: -3px;
+    background-color: currentColor;
+    -webkit-mask: var(--btn-icon, none) center / contain no-repeat;
+    mask: var(--btn-icon, none) center / contain no-repeat;
+}
+button.icon-rocket {
+    --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z'/%3E%3Cpath d='M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z'/%3E%3Cpath d='M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0'/%3E%3Cpath d='M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5'/%3E%3C/svg%3E");
+}
+button.icon-clock {
+    --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E");
+}
+button.icon-download {
+    --btn-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E");
 }
 
 /* ============================================================
@@ -180,6 +388,28 @@ input:focus, select:focus, textarea:focus {
    ============================================================ */
 footer { visibility: hidden; }
 """
+
+# Apple-style Gradio theme — soft system look with Apple Blue accent
+APPLE_THEME = gr.themes.Soft(
+    primary_hue=gr.themes.colors.blue,        # 苹果蓝 #007AFF
+    secondary_hue=gr.themes.colors.gray,
+    neutral_hue=gr.themes.colors.neutral,
+    spacing_size=gr.themes.sizes.spacing_lg,  # 大间距
+    radius_size=gr.themes.sizes.radius_lg,    # 大圆角
+    text_size=gr.themes.sizes.text_md,
+).set(
+    body_background_fill="#F5F5F7",
+    background_fill_primary="#FFFFFF",
+    background_fill_secondary="#F0F0F2",
+    border_color_primary="#E5E5EA",
+    button_primary_background_fill="#007AFF",
+    button_primary_background_fill_hover="#0066D9",
+    button_primary_text_color="#FFFFFF",
+    button_secondary_background_fill="#F0F0F2",
+    button_secondary_text_color="#1C1C1E",
+    shadow_drop="0 2px 10px rgba(0,0,0,0.04)",
+    shadow_drop_lg="0 10px 30px rgba(0,0,0,0.08)",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -343,7 +573,7 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
             template_eaf_path = PERSIST_TEMPLATE
 
             print(
-                f"✅ 成功解析模板，共 {len(tier_names)} 个层，"
+                f"成功解析模板，共 {len(tier_names)} 个层，"
                 f"层级关系: {tier_hierarchy}"
             )
         except Exception as exc:
@@ -356,9 +586,9 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
         cleanup_temp(TEMP_DIR)
         t_start = time.time()
 
-        progress(0.05, desc="🔊 Extracting audio (16 kHz mono WAV)...")
+        progress(0.05, desc="Extracting audio (16 kHz mono WAV)...")
         updates = _empty()
-        updates[5] = gr.update(value="🔊 **Stage 1/4** — Extracting audio...")
+        updates[5] = gr.update(value="**Stage 1/4** — Extracting audio...")
         yield updates
 
         ns = int(num_speakers) if num_speakers and int(num_speakers) > 0 else None
@@ -388,7 +618,7 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
         # ==============================================================
         # Success — show speaker cards (Step 3)
         # ==============================================================
-        progress(1.0, desc="✅ Complete")
+        progress(1.0, desc="Complete")
 
         speakers = pipeline_result["speakers"]
         clips = pipeline_result["speaker_clips"]
@@ -406,7 +636,7 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
             gr.update(visible=False),                          # 4  step5 (download)
             gr.update(                                         # 5  status_md
                 value=(
-                    f"✅ **Done!** Detected **{n}** speaker(s), "
+                    f"**Done!** Detected **{n}** speaker(s), "
                     f"**{len(aligned)}** segments in **{elapsed:.1f}s**.\n\n"
                     f"Listen to each voice clip below and enter a tier name "
                     f"for each speaker."
@@ -485,7 +715,7 @@ def advance_to_timeline(*args):
             gr.update(visible=False, value=None),                 # video
             gr.update(visible=False, value=""),                   # timeline
             gr.update(visible=False, value=""),                   # hidden_json
-            gr.update(value="⚠️  Please process a video first.", visible=True),
+            gr.update(value="Please process a video first.", visible=True),
         ]
 
     speakers = pipeline_state["speakers"]
@@ -555,7 +785,7 @@ def advance_to_timeline(*args):
         gr.update(value=html_content, visible=True),           # timeline_html
         gr.update(value=json_str, visible=False),              # hidden_json
         gr.update(                                             # advance_status
-            value=f"✅ **Mapping applied!**\n\n{tier_summary}",
+            value=f"**Mapping applied!**\n\n{tier_summary}",
             visible=True,
         ),
     ]
@@ -577,7 +807,7 @@ def generate_files(pipeline_state, hidden_json, template_tiers, output_dir):
             gr.update(visible=False),                              # step5_col
             gr.update(visible=False, value=None),                  # eaf_dl
             gr.update(visible=False, value=None),                  # pfsx_dl
-            gr.update(value=f"❌ **Export failed:** {msg}", visible=True),  # gen_status
+            gr.update(value=f"**Export failed:** {msg}", visible=True),  # gen_status
         ]
 
     try:
@@ -684,7 +914,7 @@ def generate_files(pipeline_state, hidden_json, template_tiers, output_dir):
 
     source_note = ""
     if fallback_used:
-        source_note = ("\n\n⚠️ **Note:** Timeline edits were NOT applied — "
+        source_note = ("\n\n**Note:** Timeline edits were NOT applied — "
                        "the frontend did not send edited segment data. "
                        "Exported data comes from the original transcription.")
 
@@ -694,7 +924,7 @@ def generate_files(pipeline_state, hidden_json, template_tiers, output_dir):
         gr.update(value=pfsx_path, visible=True),
         gr.update(
             value=(
-                f"✅ **Files generated!**\n\n"
+                f"**Files generated!**\n\n"
                 f"**Tiers created:**\n{tier_list}\n\n"
                 f"**Segments:** {len(aligned_for_export)}"
                 f"{source_note}\n\n"
@@ -713,7 +943,7 @@ def build_ui() -> gr.Blocks:
     with gr.Blocks(
         css=CUSTOM_CSS,
         title="Auto Transcriber & Speaker Diarization",
-        theme=gr.themes.Soft(),
+        theme=APPLE_THEME,
         head="""
 <script>
 // Listen for timeline editor sync messages from the iframe.
@@ -745,7 +975,18 @@ window.addEventListener('message', function(event) {
         # STEP 1 — Upload & Process
         # ==============================================================
         with gr.Column(visible=True) as step1_col:
-            gr.Markdown("# 🎙️ Auto Transcriber & Speaker Diarization")
+            gr.HTML(
+                '<div class="brand">'
+                '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+                '<path d="M12 1C10.8954 1 10 1.89543 10 3V13C10 14.1046 10.8954 15 12 15C13.1046 15 14 14.1046 14 13V3C14 1.89543 13.1046 1 12 1Z"/>'
+                '<path d="M19 10V13C19 16.866 15.866 20 12 20C8.13401 20 5 16.866 5 13V10"/>'
+                '<path d="M12 20V23"/>'
+                '<path d="M9 23H15"/>'
+                '</svg>'
+                '<span class="brand-name">Auto Transcriber</span>'
+                '<span class="brand-version">v2.0</span>'
+                '</div>'
+            )
             gr.Markdown(
                 "Upload an MP4 video to automatically transcribe speech, "
                 "identify speakers, and export ELAN-format annotation files "
@@ -754,25 +995,26 @@ window.addEventListener('message', function(event) {
 
             with gr.Row():
                 video_input = gr.File(
-                    label="📁 Upload MP4 Video",
+                    label="Upload MP4 Video",
                     file_types=[".mp4"],
                     file_count="single",
                     scale=3,
                 )
                 process_btn = gr.Button(
-                    "🚀 Start Processing",
+                    "Start Processing",
                     variant="primary",
                     scale=1,
                     size="lg",
+                    elem_classes=["btn-with-icon", "icon-rocket"],
                 )
 
             status_md = gr.Markdown(
-                value="👆 Upload an MP4 file and click **Start Processing**.",
+                value="Upload an MP4 file and click **Start Processing**.",
                 visible=True,
             )
 
             num_speakers_input = gr.Number(
-                label="👥 Number of Speakers (optional)",
+                label="Number of Speakers (optional)",
                 value=None,
                 precision=0,
                 minimum=1,
@@ -781,13 +1023,13 @@ window.addEventListener('message', function(event) {
             )
 
             template_eaf_input = gr.File(
-                label="📋 EAF Template (optional)",
+                label="EAF Template (optional)",
                 file_types=[".eaf"],
                 file_count="single",
             )
 
             output_dir_input = gr.Textbox(
-                label="📁 Output Directory",
+                label="Output Directory",
                 value=os.path.expanduser("~/Desktop"),
                 placeholder="e.g. ~/Desktop or /Users/name/Documents",
                 info="EAF and PFSX files will be saved here on export.",
@@ -795,7 +1037,7 @@ window.addEventListener('message', function(event) {
 
             # ---- Segment selection ----
             segment_enabled = gr.Checkbox(
-                label="⏱️ 启用分段处理（可选，留空则处理全片）",
+                label="启用分段处理（可选，留空则处理全片）",
                 value=False,
                 info="勾选后仅处理指定时间段内的音频",
             )
@@ -823,12 +1065,22 @@ window.addEventListener('message', function(event) {
         # STEP 3 — Speaker Mapping Cards
         # ==============================================================
         with gr.Column(visible=False) as step3_col:
-            gr.Markdown("## 🗣️ Step 3 — Identify Each Speaker")
+            gr.HTML(
+                '<div class="step-heading">'
+                '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+                '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>'
+                '<circle cx="9" cy="7" r="4"/>'
+                '<path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'
+                '<path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+                '</svg>'
+                '<span>Step 3 — Identify Each Speaker</span>'
+                '</div>'
+            )
 
             with gr.Column(elem_classes=["instruction-box"]):
                 gr.Markdown(
-                    "🔊 **Listen** to the voice sample → 📝 **Read** "
-                    "the transcription → ✏️ **Name** the speaker:"
+                    "**Listen** to the voice sample → **Read** "
+                    "the transcription → **Name** the speaker:"
                 )
                 gr.Markdown(
                     "- **Adult** → any tier name (e.g., `Teacher`, `Narrator`, `Mom`)\n"
@@ -844,26 +1096,26 @@ window.addEventListener('message', function(event) {
             for i in range(MAX_SPEAKERS):
                 with gr.Column(visible=False, elem_classes=["speaker-card"]) as card:
                     gr.Markdown(
-                        f"### 👤 Speaker {i + 1}",
+                        f"### Speaker {i + 1}",
                         elem_classes=["speaker-header"],
                     )
                     with gr.Row():
                         with gr.Column(scale=1):
                             audio = gr.Audio(
-                                label="🔊 Voice Sample",
+                                label="Voice Sample",
                                 type="filepath",
                                 interactive=False,
                                 show_download_button=False,
                             )
                         with gr.Column(scale=2):
                             samples = gr.Textbox(
-                                label="📝 Transcription Samples",
+                                label="Transcription Samples",
                                 interactive=False,
                                 lines=3,
                                 max_lines=3,
                             )
                             name_input = gr.Dropdown(
-                                label="✏️ Speaker Name",
+                                label="Speaker Name",
                                 choices=[],
                                 allow_custom_value=True,
                             )
@@ -873,9 +1125,10 @@ window.addEventListener('message', function(event) {
                 name_inputs.append(name_input)
 
             advance_btn = gr.Button(
-                "✂️ 进入时间轴编辑 →",
+                "进入时间轴编辑",
                 variant="primary",
                 size="lg",
+                elem_classes=["btn-with-icon", "icon-clock"],
             )
             advance_status = gr.Markdown(value="", visible=True)
 
@@ -883,11 +1136,19 @@ window.addEventListener('message', function(event) {
         # STEP 4 — Timeline Editor
         # ==============================================================
         with gr.Column(visible=False, elem_id="step4-col") as step4_col:
-            gr.Markdown("## ✂️ Step 4 — Review & Edit Timeline")
+            gr.HTML(
+                '<div class="step-heading">'
+                '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+                '<circle cx="12" cy="12" r="10"/>'
+                '<polyline points="12 6 12 12 16 14"/>'
+                '</svg>'
+                '<span>Step 4 — Review &amp; Edit Timeline</span>'
+                '</div>'
+            )
             with gr.Column(elem_classes=["instruction-box"]):
                 gr.Markdown(
-                    "🎬 **Watch** the video → ✂️ **Drag** segment edges to adjust timing → "
-                    "🖊️ **Click** a segment to edit text and tier assignment. "
+                    "**Watch** the video → **Drag** segment edges to adjust timing → "
+                    "**Click** a segment to edit text and tier assignment. "
                     "**Double-click** an empty area to add a new segment."
                 )
 
@@ -900,15 +1161,16 @@ window.addEventListener('message', function(event) {
             timeline_html = gr.HTML(
                 label="",
                 value="<p style='color:#888;text-align:center;padding:40px;'>"
-                      "👆 Complete speaker mapping first to see the timeline editor.</p>",
+                      "Complete speaker mapping first to see the timeline editor.</p>",
             )
             hidden_json = gr.Textbox(visible=False, elem_id="hidden-json-input")
 
             with gr.Row():
                 generate_btn = gr.Button(
-                    "📦 应用修改并生成 EAF",
+                    "应用修改并生成 EAF",
                     variant="primary",
                     size="lg",
+                    elem_classes=["btn-with-icon", "icon-download"],
                 )
             gen_status = gr.Markdown(value="", visible=True)
 
@@ -916,21 +1178,30 @@ window.addEventListener('message', function(event) {
         # STEP 5 — Download
         # ==============================================================
         with gr.Column(visible=False) as step5_col:
-            gr.Markdown("## 📥 Step 5 — Download Files")
+            gr.HTML(
+                '<div class="step-heading">'
+                '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1C1C1E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'
+                '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'
+                '<polyline points="7 10 12 15 17 10"/>'
+                '<line x1="12" y1="15" x2="12" y2="3"/>'
+                '</svg>'
+                '<span>Step 5 — Download Files</span>'
+                '</div>'
+            )
             gr.Markdown(
                 "Your annotation files are ready. Click the buttons below "
                 "to download them."
             )
             with gr.Row():
                 eaf_dl = gr.File(
-                    label="📄 EAF File (.eaf)",
+                    label="EAF File (.eaf)",
                     visible=False,
                     type="filepath",
                     file_count="single",
                     interactive=False,
                 )
                 pfsx_dl = gr.File(
-                    label="📄 PFSX File (.pfsx)",
+                    label="PFSX File (.pfsx)",
                     visible=False,
                     type="filepath",
                     file_count="single",
