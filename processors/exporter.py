@@ -26,6 +26,8 @@ def generate_eaf(
     audio_path: str,
     output_path: str,
     template_eaf_path: str | None = None,
+    tiers: list[str] | None = None,
+    hierarchy: dict[str, str | None] | None = None,
 ) -> str:
     """
     Create an ELAN .eaf file with one tier per speaker.
@@ -49,6 +51,12 @@ def generate_eaf(
         Where to write the .eaf file.
     template_eaf_path : str or None
         Optional path to a template EAF whose tier structure is preserved.
+    tiers : list[str] or None
+        Optional ordered tier names (used as fallback when template_eaf_path
+        is unavailable, e.g. after temp cleanup).
+    hierarchy : dict[str, str | None] or None
+        Optional tier parent→child hierarchy (PARENT_REF), used as fallback
+        when template_eaf_path is unavailable.
 
     Returns
     -------
@@ -59,7 +67,7 @@ def generate_eaf(
 
     eaf = Elan.Eaf(author="auto_transcriber_web")
 
-    if template_eaf_path:
+    if template_eaf_path and os.path.exists(template_eaf_path):
         # ---- Template mode: copy structure from the template EAF ----
         template = Elan.Eaf(template_eaf_path)
 

@@ -84,6 +84,7 @@ button{{cursor:pointer;}}
     max-height:120px;overflow-y:auto;
 }}
 .error-bar.show{{display:block;}}
+.error-bar.success{{background:#2d7a4a;}}
 .error-bar .err-close{{
     position:absolute;top:6px;right:12px;
     background:none;border:none;color:#fff;font-size:18px;
@@ -315,6 +316,23 @@ button{{cursor:pointer;}}
 .layer-mgr-panel .btn-cancel:hover {{ background: #2A2A4A; }}
 
 /* ============================================================
+   Restore banner (autosave recovery)
+   ============================================================ */
+.restore-banner{{
+    display:none;align-items:center;justify-content:center;gap:12px;
+    padding:10px 16px;background:#1a3a2a;border-bottom:2px solid #2d7a4a;
+    font-size:13px;color:#c8e6c9;flex-shrink:0;
+}}
+.restore-banner.show{{display:flex;}}
+.restore-banner button{{
+    border:none;border-radius:4px;padding:5px 16px;font-size:12px;cursor:pointer;
+}}
+.restore-banner .btn-restore{{background:#2d7a4a;color:#fff;}}
+.restore-banner .btn-restore:hover{{background:#3a9a5a;}}
+.restore-banner .btn-ignore{{background:transparent;color:#888;border:1px solid #555;}}
+.restore-banner .btn-ignore:hover{{background:#333;color:#ccc;}}
+
+/* ============================================================
    Tier drag reorder
    ============================================================ */
 .tier-label {{ position: relative; }}
@@ -336,6 +354,13 @@ button{{cursor:pointer;}}
     <button class="err-close" onclick="hideErrorBar()">&times;</button>
 </div>
 
+<!-- Restore banner (autosave recovery) -->
+<div class="restore-banner" id="restoreBanner">
+    <span id="restoreMsg">📌 检测到上次自动保存的工作进度</span>
+    <button class="btn-restore" id="btnRestore">✅ 恢复</button>
+    <button class="btn-ignore" id="btnIgnoreRestore">✕ 忽略</button>
+</div>
+
 <!-- ============================================================
      Top Panel
      ============================================================ -->
@@ -349,6 +374,12 @@ button{{cursor:pointer;}}
         <div class="undo-redo-row">
             <button class="btn-secondary" id="btnUndo" disabled>↩ 撤销</button>
             <button class="btn-secondary" id="btnRedo" disabled>↪ 重做</button>
+        </div>
+
+        <h3>💾 工作保存</h3>
+        <div class="undo-redo-row">
+            <button class="btn-secondary" id="btnSaveWork">💾 保存进度</button>
+            <button class="btn-secondary" id="btnLoadWork">📂 加载工作</button>
         </div>
 
         <h3>🔍 搜索与统计</h3>
@@ -1012,6 +1043,206 @@ function hideErrorBar() {{
 // ============================================================
 // Init
 // ============================================================
+// ============================================================
+// Persistence — collect current state for save/autosave
+// ============================================================
+function collectSaveData() {{
+    var orderedTiers = getTierOrder();
+    return JSON.stringify({{
+        version: 1,
+        savedAt: new Date().toISOString(),
+        videoPath: EDITOR_DATA.videoUrl || '',
+        audioDuration: audioDuration,
+        segments: segments.map(function(s) {{
+            return {{
+                id: s.id, tier: s.tier, start: snap(s.start), end: snap(s.end),
+                text: s.text || '', speaker: s.speaker || s.tier, words: s.words || [],
+            }};
+        }}),
+        tierOptions: orderedTiers.slice(),
+        tierHierarchy: TIER_HIERARCHY,
+        layerVisibility: Array.from(hiddenTiers),
+        tierOrder: orderedTiers.slice(),
+    }});
+}}
+
+// ---- Toast helper: success (green) vs error (red) ----
+function showToast(msg, ok) {{
+    var bar = $('errorBar');
+    if (ok) bar.classList.add('success'); else bar.classList.remove('success');
+    showErrorBar(msg);
+}}
+
+// ---- Auto-save (every 30 seconds) — POST /autosave on the server ----
+var AUTOSAVE_INTERVAL = 30000;
+var _autosaveTimer = null;
+
+function postAutosave(type) {{
+    var payload = {{
+        type: type,
+        data: JSON.parse(collectSaveData()),
+    }};
+    return fetch('/autosave', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify(payload),
+    }}).then(function(resp) {{ return resp.json(); }});
+}}
+
+function autoSave() {{
+    postAutosave('autosave')
+        .then(function(result) {{
+            if (!result.success) console.warn('[autoSave] 自动保存失败:', result.error);
+        }})
+        .catch(function(err) {{
+            console.warn('[autoSave] 自动保存请求失败:', err);
+        }});
+}}
+
+function startAutoSave() {{
+    if (_autosaveTimer) clearInterval(_autosaveTimer);
+    _autosaveTimer = setInterval(autoSave, AUTOSAVE_INTERVAL);
+    console.log('[autoSave] 自动保存已启动 (间隔 ' + (AUTOSAVE_INTERVAL/1000) + 's)');
+}}
+
+// ---- Manual save (timestamped file on server) ----
+function saveWork() {{
+    postAutosave('manual')
+        .then(function(result) {{
+            if (result.success) {{
+                showToast('✅ 进度已保存: saves/' + (result.filename || 'autosave.json'), true);
+                console.log('[saveWork] 保存成功:', result.filepath);
+            }} else {{
+                showToast('❌ 保存失败: ' + (result.error || '未知错误'), false);
+            }}
+        }})
+        .catch(function(err) {{
+            console.error('[saveWork] 保存请求失败:', err);
+            showToast('❌ 保存失败: ' + (err.message || err), false);
+        }});
+}}
+
+// ---- Manual load: local file picker + client-side apply ----
+// (no backend needed — FileReader reads the JSON and applies it directly)
+function loadWork() {{
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = function(e) {{
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {{
+            try {{
+                var content = JSON.parse(ev.target.result);
+                applyLoadedData(content);
+                showToast('✅ 工作已恢复 (' + content.segments.length + ' 个标注)', true);
+                console.log('[loadWork] 已加载文件:', file.name);
+            }} catch (err) {{
+                console.error('[loadWork] 解析文件失败:', err);
+                showToast('❌ 加载失败: ' + (err.message || err), false);
+            }}
+        }};
+        reader.readAsText(file);
+    }};
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+}}
+
+// ---- Apply loaded data to editor state ----
+function applyLoadedData(data) {{
+    if (!data || !data.segments) return;
+    saveUndoState();
+    segments = data.segments.map(function(s) {{
+        return {{
+            id: s.id || 'seg_' + (_segCounter++),
+            tier: s.tier || s.tierName || 'UNKNOWN',
+            start: s.start || 0,
+            end: s.end || (s.start + 1),
+            text: s.text || '',
+            speaker: s.speaker || s.tier || '',
+            words: s.words || [],
+        }};
+    }});
+    if (data.tierOptions && data.tierOptions.length > 0) {{
+        tiers = data.tierOptions.slice();
+    }}
+    if (data.tierHierarchy) {{
+        // Merge into TIER_HIERARCHY (can't reassign const)
+        Object.keys(data.tierHierarchy).forEach(function(k) {{
+            TIER_HIERARCHY[k] = data.tierHierarchy[k];
+        }});
+    }}
+    if (data.layerVisibility) {{
+        hiddenTiers = new Set(data.layerVisibility);
+        localStorage.setItem('hiddenTiers', JSON.stringify(Array.from(hiddenTiers)));
+    }}
+    if (data.tierOrder && data.tierOrder.length > 0) {{
+        tiers = data.tierOrder.slice();
+        saveTierOrder(tiers);
+    }}
+    if (data.audioDuration) {{
+        audioDuration = data.audioDuration;
+    }}
+    _segCounter = segments.length + 10;
+    deselectAll();
+    renderAll();
+    syncToParent();
+}}
+
+// ---- Restore banner: check server-side autosave on page load ----
+function checkAutoSave() {{
+    fetch('/check_autosave')
+        .then(function(resp) {{ return resp.json(); }})
+        .then(function(data) {{
+            if (data.exists) {{
+                var banner = $('restoreBanner');
+                var msg = $('restoreMsg');
+                msg.textContent = '📌 检测到上次自动保存 (' + data.savedAt + ', ' +
+                    data.segCount + ' 个标注)';
+                banner.classList.add('show');
+                console.log('[checkAutoSave] 发现自动保存:', data);
+            }}
+        }})
+        .catch(function(err) {{
+            console.warn('[checkAutoSave] 检查自动保存失败:', err);
+        }});
+}}
+
+// ---- Restore autosave from server ----
+function restoreAutosave() {{
+    $('restoreBanner').classList.remove('show');
+    fetch('/load_work', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ filename: 'autosave.json' }}),
+    }}).then(function(resp) {{ return resp.json(); }})
+      .then(function(result) {{
+          if (result.success && result.data) {{
+              applyLoadedData(result.data);
+              showToast('✅ 已恢复自动保存 (' + result.data.segments.length + ' 个标注)', true);
+          }} else {{
+              showToast('❌ 恢复失败: ' + (result.error || '未知错误'), false);
+          }}
+      }})
+      .catch(function(err) {{
+          console.error('[restoreAutosave] 请求失败:', err);
+          showToast('❌ 恢复失败: ' + (err.message || err), false);
+      }});
+}}
+
+// Last-moment autosave when the page is closed or reloaded
+window.addEventListener('beforeunload', function() {{
+    try {{
+        var payload = JSON.stringify({{
+            type: 'autosave',
+            data: JSON.parse(collectSaveData()),
+        }});
+        navigator.sendBeacon('/autosave', new Blob([payload], {{ type: 'application/json' }}));
+    }} catch(e) {{ /* ignore */ }}
+}});
+
 function init() {{
     videoPlayer.src = EDITOR_DATA.videoUrl;
     tiers = EDITOR_DATA.tierOptions.slice();
@@ -1047,6 +1278,8 @@ function init() {{
     updateUndoButtons();
     initSplitPanels();
     updateLayerMgrStatus();
+    startAutoSave();
+    checkAutoSave();
 }}
 
 // ============================================================
@@ -1522,6 +1755,14 @@ function bindEvents() {{
         scrollSyncing = false;
     }});
 
+    // ---- Save / Load / Restore ----
+    $('btnSaveWork').addEventListener('click', saveWork);
+    $('btnLoadWork').addEventListener('click', loadWork);
+    $('btnRestore').addEventListener('click', restoreAutosave);
+    $('btnIgnoreRestore').addEventListener('click', function() {{
+        $('restoreBanner').classList.remove('show');
+    }});
+
     // ---- Layer manager panel ----
     $('layerMgrBtn').addEventListener('click', toggleLayerManager);
     $('btnLayerCancel').addEventListener('click', cancelLayerVisibility);
@@ -1724,4 +1965,4 @@ init();
 </body>
 </html>"""
     escaped = html.escape(inner_html, quote=True)
-    return f'<iframe sandbox="allow-scripts allow-same-origin" style="width:100%;height:85vh;border:none;display:block;" srcdoc="{escaped}"></iframe>'
+    return f'<iframe sandbox="allow-scripts allow-same-origin allow-modals" style="width:100%;height:85vh;border:none;display:block;" srcdoc="{escaped}"></iframe>'

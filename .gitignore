@@ -8,6 +8,9 @@ test_files/
 output/
 *.wav
 
+# User work saves (autosave/manual save JSON — user data, not source)
+saves/
+
 # Logs
 logs/
 

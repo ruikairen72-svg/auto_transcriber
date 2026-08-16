@@ -18,6 +18,7 @@ import time
 import traceback
 from datetime import datetime
 import gradio as gr
+from fastapi import Request
 
 # ---------------------------------------------------------------------------
 # Monkey-patch: fix gradio_client 1.3.0 bug where JSON Schema
@@ -71,6 +72,11 @@ from config import MAX_SPEAKERS, TEMP_DIR, validate_token
 from processors import run_pipeline, cleanup_temp
 from processors.exporter import generate_eaf, generate_pfsx
 from timeline_editor import build_timeline_html
+
+# ---------------------------------------------------------------------------
+# Persistence — save/load work progress (HTTP routes on the Gradio FastAPI app)
+# ---------------------------------------------------------------------------
+SAVES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 
 
 def parse_time_to_seconds(time_str: str | None) -> float | None:
@@ -331,8 +337,10 @@ def process_video(video_file, num_speakers, template_eaf_file, state, template_t
                         if candidate_parent in tier_names and candidate_parent != tn:
                             tier_hierarchy[tn] = candidate_parent
 
-            template_eaf_path = os.path.join(TEMP_DIR, "_template.eaf")
-            tpl.to_file(template_eaf_path)
+            # Use the persistent copy (in templates/) instead of temp/ so it
+            # survives cleanup_temp() calls between runs. The file was already
+            # copied to PERSIST_TEMPLATE above.
+            template_eaf_path = PERSIST_TEMPLATE
 
             print(
                 f"✅ 成功解析模板，共 {len(tier_names)} 个层，"
@@ -660,7 +668,12 @@ def generate_files(pipeline_state, hidden_json, template_tiers, output_dir):
 
     try:
         template_eaf_path = pipeline_state.get("_template_eaf_path")
-        generate_eaf(aligned_for_export, speaker_names, audio_path, eaf_path, template_eaf_path)
+        tier_names_cached = pipeline_state.get("_tier_names", [])
+        tier_hierarchy_cached = pipeline_state.get("_tier_hierarchy", {})
+        generate_eaf(aligned_for_export, speaker_names, audio_path, eaf_path,
+                     template_eaf_path,
+                     tiers=tier_names_cached if tier_names_cached else None,
+                     hierarchy=tier_hierarchy_cached if tier_hierarchy_cached else None)
         generate_pfsx(speaker_names, pfsx_path, template_tiers if template_tiers else None)
     except Exception as exc:
         return _err(f"File generation error: {exc}")
@@ -1010,16 +1023,139 @@ if __name__ == "__main__":
 
     validate_token()
     cleanup_temp(TEMP_DIR)
+    os.makedirs(SAVES_DIR, exist_ok=True)
 
     print("=" * 60)
     print("  🎙️  Auto Transcriber & Speaker Diarization")
     print("     Opening http://localhost:7860 ...")
     print("=" * 60)
 
-    ui = build_ui()
-    ui.queue(max_size=10).launch(
+    demo = build_ui()
+    demo.queue(max_size=10).launch(
         server_name="127.0.0.1",
         server_port=7860,
         share=False,
         inbrowser=True,
+        prevent_thread_lock=True,
     )
+
+    # -----------------------------------------------------------------------
+    # Persistence routes — registered INLINE here, AFTER launch().
+    # launch() builds a fresh FastAPI app, so the routes must be attached to
+    # ``demo.app`` after it returns.  Registering them any earlier would
+    # attach them to a discarded app instance and every request would 404.
+    # -----------------------------------------------------------------------
+    from fastapi.responses import JSONResponse
+
+    app = demo.app
+
+    @app.post("/autosave")
+    async def autosave(request: Request):
+        """Save work data. Body: {"type": "autosave"|"manual", "data": {...}}."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(
+                {"success": False, "error": "请求体不是有效的 JSON"},
+                status_code=400)
+        save_type = body.get("type", "manual")
+        payload = body.get("data", {})
+        if not isinstance(payload, dict):
+            return JSONResponse(
+                {"success": False, "error": "无效的数据格式: data 必须是对象"},
+                status_code=400)
+        try:
+            os.makedirs(SAVES_DIR, exist_ok=True)
+            if save_type == "autosave":
+                filepath = os.path.join(SAVES_DIR, "autosave.json")
+            else:
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filepath = os.path.join(SAVES_DIR, f"transcript_work_{ts}.json")
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            saved_at = datetime.fromtimestamp(
+                os.path.getmtime(filepath)).isoformat()
+            print(f"  💾 已保存工作进度 → {filepath}")
+            return JSONResponse({
+                "success": True,
+                "filepath": filepath,
+                "filename": os.path.basename(filepath),
+                "savedAt": saved_at,
+            })
+        except Exception as exc:
+            print(f"  ❌ /autosave 失败: {exc}")
+            return JSONResponse(
+                {"success": False, "error": str(exc)}, status_code=500)
+
+    @app.get("/check_autosave")
+    async def check_autosave():
+        """Check whether an autosave file exists (mtime-based savedAt)."""
+        filepath = os.path.join(SAVES_DIR, "autosave.json")
+        if not os.path.exists(filepath):
+            return JSONResponse({"exists": False}, status_code=404)
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = json.load(f)
+            saved_at = datetime.fromtimestamp(
+                os.path.getmtime(filepath)).isoformat()
+            return JSONResponse({
+                "exists": True,
+                "savedAt": saved_at,
+                "segCount": len(content.get("segments", [])),
+                "tierCount": len(content.get("tierOptions", [])),
+            })
+        except Exception as exc:
+            return JSONResponse({
+                "exists": True,
+                "savedAt": datetime.fromtimestamp(
+                    os.path.getmtime(filepath)).isoformat(),
+                "segCount": 0,
+                "tierCount": 0,
+                "warning": str(exc),
+            })
+
+    @app.post("/load_work")
+    async def load_work(request: Request):
+        """Load a saved work file from saves/. Body: {"filename": "..."}."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(
+                {"success": False, "error": "请求体不是有效的 JSON"},
+                status_code=400)
+        target = (body.get("filename") or body.get("filepath") or "").strip()
+        if not target:
+            return JSONResponse(
+                {"success": False, "error": "未提供文件名"}, status_code=400)
+        if os.path.isabs(target):
+            filepath = target
+        else:
+            filepath = os.path.join(SAVES_DIR, target)
+        # Safety: resolved path must stay inside saves/
+        real_saves = os.path.realpath(SAVES_DIR)
+        real_path = os.path.realpath(filepath)
+        if real_path != real_saves and not real_path.startswith(real_saves + os.sep):
+            return JSONResponse(
+                {"success": False, "error": "非法的文件路径"}, status_code=403)
+        if not os.path.exists(real_path):
+            return JSONResponse(
+                {"success": False,
+                 "error": f"文件不存在: {os.path.basename(target)}"},
+                status_code=404)
+        try:
+            with open(real_path, "r", encoding="utf-8") as f:
+                content = json.load(f)
+        except Exception as exc:
+            return JSONResponse(
+                {"success": False, "error": f"文件解析失败: {exc}"},
+                status_code=500)
+        print(f"  📂 已加载工作文件 → {real_path}")
+        return JSONResponse({
+            "success": True,
+            "data": content,
+            "filename": os.path.basename(real_path),
+        })
+
+    print("  🔌 Persistence routes registered: /autosave /check_autosave /load_work")
+
+    demo.block_thread()
