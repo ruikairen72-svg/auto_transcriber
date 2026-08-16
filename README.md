@@ -271,6 +271,8 @@ transcript/
 ├── timeline_editor.py             # ELAN 风格多层时间轴编辑器（完整HTML/CSS/JS）
 ├── config.py                      # 全局配置（模型、路径、音频参数）
 ├── requirements.txt               # Python 依赖
+├── packages.txt                   # Spaces 系统依赖（ffmpeg、libsndfile1）
+├── Dockerfile                     # 可选：Docker 部署（CPU 版 PyTorch）
 ├── .env                           # HuggingFace Token（不纳入版本控制）
 ├── .gitignore
 ├── README.md
@@ -291,6 +293,32 @@ transcript/
 ├── logs/                          # 错误日志
 └── output/                        # 导出文件默认目录
 ```
+
+---
+
+## 部署到 Hugging Face Spaces
+
+### 方式一：Gradio SDK（推荐，最简单）
+
+1. 登录 [huggingface.co](https://huggingface.co)，点击头像 → **New Space**
+2. 填写 Space 名称，**SDK 选择 "Gradio"**，硬件选 **CPU basic（免费）**
+3. 上传项目文件（二选一）：
+   - **Git 推送**：`git remote add space https://huggingface.co/spaces/<用户名>/<space名称>` → `git push space main`
+   - **网页上传**：Space 页面 → **Files** 标签 → 拖入 `app.py`、`config.py`、`requirements.txt`、`packages.txt`、`timeline_editor.py`、`processors/`、`templates/` 等文件
+4. 配置密钥：Space 页面 → **Settings → Variables and secrets** → 添加 Secret：
+   - `HF_TOKEN` = `hf_xxx`（**必填** —— pyannote 说话人分离模型需要；缺失时应用启动会提示并退出）
+   - `GRADIO_SERVER_NAME` = `0.0.0.0`（**必填** —— 让容器对外提供服务）
+   - `OUTPUT_DIR` = `output`（可选 —— EAF 导出的默认目录；不设则默认 `~/Desktop`，云端不存在该目录）
+5. 等待构建完成（首次构建需安装 PyTorch 等大型依赖，约 10–20 分钟）
+6. 打开 Space 公开链接，上传视频即可使用
+
+> **首次运行提示**：Whisper / pyannote / FunASR 模型在首次处理视频时自动下载到缓存（约 5–10 GB），首个任务会比较慢。
+>
+> **数据持久性说明**：Spaces 的磁盘是临时的，`saves/` 中的自动保存会随 Space 重启清空，请及时导出 EAF 或下载保存文件。`temp/`、`saves/` 目录会自动创建并具备写入权限，无需额外配置。
+
+### 方式二：Docker SDK（Koyeb / Render / Railway 同样适用）
+
+项目自带 `Dockerfile`（CPU 版 PyTorch，镜像体积远小于默认 CUDA 轮子）。创建 Space 时 SDK 选 **Docker**；部署到 Koyeb / Render / Railway 时直接指定 Docker 构建即可。环境变量配置同上（这些平台在各自的环境变量面板中设置 `HF_TOKEN`、`GRADIO_SERVER_NAME=0.0.0.0`）。
 
 ---
 
